@@ -1,4 +1,6 @@
+import { ScoreTypes } from '../utils/global';
 import { ProfilePrivateData } from './profile-private-data';
+
 
 interface Score {
   scoreType: string;
@@ -8,12 +10,6 @@ interface Score {
 interface ExtendedPublicData {
   field: string;
   value: string;
-}
-
-// scores Field -> this should go to database if we convert to microservice
-export enum ScoreTypes {
-  reputationScore = 'reputation_score',
-  socialScore = 'social_score',
 }
 
 export class SmartProfile {

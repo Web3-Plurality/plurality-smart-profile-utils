@@ -22,7 +22,7 @@ interface CredSalts {
   collections: string;
 }
 
-export class AttestCred {
+export class AttestedCred {
   interests: string[];
   reputationTags: string[];
   badges: string[];
@@ -57,13 +57,13 @@ export class AttestedPlatformIds {
 }
 
 export class ProfilePrivateData {
-  attestedCred: AttestCred;
+  attestedCred: AttestedCred;
   attestedPlatformIds: AttestedPlatformIds;
   linkedAddress: LinkedAddress[];
   extendedPrivateData: ExtendedPrivateData[];
 
   constructor() {
-    this.attestedCred = new AttestCred();
+    this.attestedCred = new AttestedCred();
     this.attestedPlatformIds = new AttestedPlatformIds();
     this.linkedAddress = [];
     this.extendedPrivateData = [];
