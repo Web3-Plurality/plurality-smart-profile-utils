@@ -3,15 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "exports": {
-    "import": "./dist/frontend/index.js",  
-    "require": "./dist/backend/index.js"  
+    "import": "./dist/esm/index.js",
+    "require": "./dist/commonjs/index.js" 
   },
-  "type": "commonjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build:frontend": "tsc --project tsconfig.frontend.json",
-    "build:backend": "tsc --project tsconfig.backend.json",
-    "build": "npm run build:frontend && npm run build:backend"
+    "build:esm": "tsc --project tsconfig.esm.json",
+    "build:commonjs": "tsc --project tsconfig.commonjs.json",
+    "build": "npm run build:esm && npm run build:commonjs"
   },
   "files": [
     "dist/",
