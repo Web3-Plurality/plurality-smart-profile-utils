@@ -16,10 +16,10 @@ export class SmartProfile {
   username: string;
   avatar: string;
   bio: string;
-  scores: Score[]; // attest
+  scores: Score[]; 
   connectedPlatforms: string[];
-  profileTypeStreamId: string; // when should we have to put this
-  version: string; // when should we have to put this
+  profileTypeStreamId: string; 
+  version: string; 
   extendedPublicData: ExtendedPublicData[];
   attestation: any;
   privateData: ProfilePrivateData;
@@ -33,8 +33,8 @@ export class SmartProfile {
       scoreValue: 0,
     }));
     this.connectedPlatforms = data?.connected_platforms || [];
-    this.profileTypeStreamId = '';
-    this.version = '1'; // fix latter
+    this.profileTypeStreamId = data?.profileTypeStreamId || '';
+    this.version = '2'; 
     this.attestation = {};
     this.extendedPublicData = [];
     this.privateData = new ProfilePrivateData();

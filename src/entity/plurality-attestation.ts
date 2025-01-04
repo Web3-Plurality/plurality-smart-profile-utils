@@ -339,7 +339,7 @@ export class PluralityAttestation {
         { name: 'version', value: JSON.stringify(profile.version), type: 'string' },
       ]);
 
-      return profile?.attestation?.message?.data === encodedData;
+      return String(profile?.attestation?.message?.data) === String(encodedData);
     } catch (error) {
       // Logger.error(`error occur while verifying offchain attestation ${JSON.stringify(error)}`);
       return false;
