@@ -4,7 +4,7 @@
   "description": "A package for managing Smart Profile entities, including their data model, utilities, and core functionality",
   "exports": {
     "import": "./dist/esm/index.js",
-    "require": "./dist/commonjs/index.js" 
+    "require": "./dist/commonjs/index.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
