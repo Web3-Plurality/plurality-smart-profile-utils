@@ -20,13 +20,21 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "ts-node": "^10.9.2",
-    "typescript": "^5.7.2"
-  },
   "dependencies": {
     "@ethereum-attestation-service/eas-sdk": "^2.7.0",
     "ethers": "^6.13.4",
     "class-transformer": "^0.5.1"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2",
+    "@semantic-release/exec": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^9.2.6",
+    "@semantic-release/npm": "^11.0.2"
   }
 }
