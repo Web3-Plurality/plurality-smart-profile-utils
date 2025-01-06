@@ -10,10 +10,10 @@ interface ConnectedProfiles {
   username?: string;
 }
 
-interface ExtendedPrivateData {
-  field: string;
-  value: string;
-}
+// interface ExtendedPrivateData {
+//   field: string;
+//   value: string;
+// }
 
 interface CredSalts {
   interests: string;
@@ -60,12 +60,12 @@ export class ProfilePrivateData {
   attestedCred: AttestedCred;
   attestedPlatformIds: AttestedPlatformIds;
   linkedAddress: LinkedAddress[];
-  extendedPrivateData: ExtendedPrivateData[];
+  extendedPrivateData: any;
 
   constructor() {
     this.attestedCred = new AttestedCred();
     this.attestedPlatformIds = new AttestedPlatformIds();
     this.linkedAddress = [];
-    this.extendedPrivateData = [];
+    this.extendedPrivateData = {};
   }
 }

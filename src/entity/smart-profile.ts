@@ -7,10 +7,10 @@ interface Score {
   scoreValue: number;
 }
 
-interface ExtendedPublicData {
-  field: string;
-  value: string;
-}
+// interface ExtendedPublicData {
+//   field: string;
+//   value: string;
+// }
 
 export class SmartProfile {
   username: string;
@@ -20,7 +20,7 @@ export class SmartProfile {
   connectedPlatforms: string[];
   profileTypeStreamId: string; 
   version: string; 
-  extendedPublicData: ExtendedPublicData[];
+  extendedPublicData: any;
   attestation: any;
   privateData: ProfilePrivateData;
 
@@ -36,7 +36,7 @@ export class SmartProfile {
     this.profileTypeStreamId = data?.profileTypeStreamId || '';
     this.version = '2'; 
     this.attestation = {};
-    this.extendedPublicData = [];
+    this.extendedPublicData = {};
     this.privateData = new ProfilePrivateData();
   }
 
@@ -54,7 +54,7 @@ export class SmartProfile {
     this.privateData.attestedCred.badges = this.privateData.attestedCred.badges.concat(
       user.privateData.attestedCred.badges,
     );
-    this.extendedPublicData = this.extendedPublicData.concat(user.extendedPublicData);
+    this.extendedPublicData = {...user.extendedPublicData, ...this.extendedPublicData };
     this.privateData.linkedAddress = this.privateData.linkedAddress.concat(user.privateData.linkedAddress);
     const newProfile = user.privateData.attestedPlatformIds.connectedProfiles.filter(
       (profile) => !this.privateData.attestedPlatformIds.connectedProfiles.includes(profile),
