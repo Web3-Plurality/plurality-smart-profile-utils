@@ -7,11 +7,6 @@ interface Score {
   scoreValue: number;
 }
 
-// interface ExtendedPublicData {
-//   field: string;
-//   value: string;
-// }
-
 export class SmartProfile {
   username: string;
   avatar: string;
@@ -55,7 +50,7 @@ export class SmartProfile {
       user.privateData.attestedCred.badges,
     );
     this.extendedPublicData = {...user.extendedPublicData, ...this.extendedPublicData };
-    this.privateData.linkedAddress = this.privateData.linkedAddress.concat(user.privateData.linkedAddress);
+    this.privateData.extendedPrivateData = { ...user.privateData.extendedPrivateData, ...this.privateData.extendedPrivateData }
     const newProfile = user.privateData.attestedPlatformIds.connectedProfiles.filter(
       (profile) => !this.privateData.attestedPlatformIds.connectedProfiles.includes(profile),
     );

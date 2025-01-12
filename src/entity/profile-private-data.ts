@@ -10,11 +10,6 @@ interface ConnectedProfiles {
   username?: string;
 }
 
-// interface ExtendedPrivateData {
-//   field: string;
-//   value: string;
-// }
-
 interface CredSalts {
   interests: string;
   reputationTags: string;
