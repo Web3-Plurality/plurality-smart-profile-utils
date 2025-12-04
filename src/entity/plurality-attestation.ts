@@ -373,6 +373,228 @@ export class PluralityAttestation {
     }
   }
 
+  // ===== ON-CHAIN ATTESTATION METHODS (Sapphire Chain) =====
+
+  /**
+   * Create on-chain attestations for a Smart Profile on Sapphire chain
+   * Creates TWO attestations:
+   * 1. Public Profile attestation (Schema A)
+   * 2. Private Profile attestation with Merkle root (Schema B)
+   *
+   * @param smartProfile - The smart profile to attest
+   * @param recipientAddress - User's PKP address
+   * @param publicSchemaUid - Public schema UID (e.g., 0xbc2f3f4d...)
+   * @param privateSchemaUid - Private schema UID (e.g., 0x732900b9...)
+   * @returns Attestation UIDs and transaction hashes
+   */
+  async attestSmartProfileOnChain(
+    smartProfile: SmartProfile,
+    recipientAddress: string,
+    publicSchemaUid: string,
+    privateSchemaUid: string
+  ): Promise<{
+    publicAttestationUID: string;
+    privateAttestationUID: string;
+    transactionHashes: string[];
+    chainId: number;
+  }> {
+    // Initialize EAS SDK for on-chain operations
+    const eas = new EAS(this.config.easContractAddress);
+    const provider = new ethers.JsonRpcProvider(this.config.rpcProvider);
+    const signer = new ethers.Wallet(this.config.signerPrivateKey || '', provider);
+
+    // Get current gas price from network and use a reasonable value for Sapphire
+    const feeData = await provider.getFeeData();
+    console.log('Current network gas price:', feeData.gasPrice?.toString());
+
+    eas.connect(signer);
+
+    // Step 1: Attest public profile data (Schema A)
+    const publicData = this.encodePublicProfileData(smartProfile);
+
+    const publicTxResponse: any = await eas.attest({
+      schema: publicSchemaUid,
+      data: {
+        recipient: recipientAddress,
+        expirationTime: BigInt(0),
+        revocable: true,
+        refUID: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        data: publicData,
+        value: BigInt(0),
+      },
+    });
+
+    // Use the transaction's wait callback to get attestation UID
+    const publicAttestationUID: string = await publicTxResponse.wait();
+    console.log(`Public attestation created: ${publicAttestationUID}`);
+
+    // Step 2: Attest private data Merkle root (Schema B)
+    const merkleRoot = this.generateMerkleRootFromPrivateData(smartProfile.privateData);
+    const privateData = this.encodePrivateProfileData(merkleRoot, '');
+
+    const privateTxResponse: any = await eas.attest({
+      schema: privateSchemaUid,
+      data: {
+        recipient: recipientAddress,
+        expirationTime: BigInt(0),
+        revocable: true,
+        refUID: publicAttestationUID, // Link to public attestation
+        data: privateData,
+        value: BigInt(0),
+      },
+    });
+
+    // Use the transaction's wait callback to get attestation UID
+    const privateAttestationUID: string = await privateTxResponse.wait();
+    console.log(`Private attestation created: ${privateAttestationUID}`);
+
+    return {
+      publicAttestationUID: publicAttestationUID,
+      privateAttestationUID: privateAttestationUID,
+      transactionHashes: [(publicTxResponse as any).tx?.hash || '', (privateTxResponse as any).tx?.hash || ''],
+      chainId: Number((await provider.getNetwork()).chainId),
+    };
+  }
+
+  /**
+   * Encode public profile data according to Schema A
+   * Schema: string username,string bio,string avatar,string scores,string connectedPlatforms,string profileTypeStreamId,string version,string extendedPublicData
+   */
+  private encodePublicProfileData(profile: SmartProfile): string {
+    const schemaEncoder = new SchemaEncoder(
+      'string username,string bio,string avatar,string scores,string connectedPlatforms,string profileTypeStreamId,string version,string extendedPublicData'
+    );
+
+    return schemaEncoder.encodeData([
+      { name: 'username', value: profile.username, type: 'string' },
+      { name: 'bio', value: profile.bio, type: 'string' },
+      { name: 'avatar', value: profile.avatar, type: 'string' },
+      { name: 'scores', value: JSON.stringify(profile.scores), type: 'string' },
+      { name: 'connectedPlatforms', value: JSON.stringify(profile.connectedPlatforms), type: 'string' },
+      { name: 'profileTypeStreamId', value: profile.profileTypeStreamId, type: 'string' },
+      { name: 'version', value: profile.version, type: 'string' },
+      { name: 'extendedPublicData', value: JSON.stringify(profile.extendedPublicData || {}), type: 'string' },
+    ]);
+  }
+
+  /**
+   * Encode private profile data according to Schema B
+   * Schema: bytes32 privateDataRoot,string databasePointer
+   */
+  private encodePrivateProfileData(merkleRoot: string, databasePointer: string): string {
+    const schemaEncoder = new SchemaEncoder('bytes32 privateDataRoot,string databasePointer');
+
+    return schemaEncoder.encodeData([
+      { name: 'privateDataRoot', value: merkleRoot, type: 'bytes32' },
+      { name: 'databasePointer', value: databasePointer, type: 'string' },
+    ]);
+  }
+
+  /**
+   * Generate Merkle root from private data
+   * Combines attestedCred and attestedPlatformIds into a single Merkle tree
+   */
+  private generateMerkleRootFromPrivateData(privateData: ProfilePrivateData): string {
+    const merkleValues: MerkleValueWithSalt[] = [];
+
+    // Add credentials to Merkle tree
+    const credSchema = this.toMerkleValueWithSalt(privateData.attestedCred, false);
+    if (credSchema?.length > 0) {
+      merkleValues.push(...credSchema);
+    }
+
+    // Add platform IDs to Merkle tree
+    const platformIdSchema = this.toMerkleValueWithSalt(privateData.attestedPlatformIds, false);
+    if (platformIdSchema?.length > 0) {
+      merkleValues.push(...platformIdSchema);
+    }
+
+    if (merkleValues.length === 0) {
+      // No private data, return zero hash
+      return '0x0000000000000000000000000000000000000000000000000000000000000000';
+    }
+
+    // Generate Merkle tree
+    const privateDataObj = new PrivateData(merkleValues);
+    const fullTree = privateDataObj.getFullTree();
+    return fullTree.root;
+  }
+
+  /**
+   * Retrieve and decode an on-chain attestation
+   * @param attestationUID - The UID of the on-chain attestation
+   * @returns Decoded attestation data
+   */
+  async getOnChainAttestation(attestationUID: string): Promise<{
+    attestation: any;
+    decodedData: any;
+  }> {
+    const eas = new EAS(this.config.easContractAddress);
+    const provider = new ethers.JsonRpcProvider(this.config.rpcProvider);
+    eas.connect(provider);
+
+    const attestation = await eas.getAttestation(attestationUID);
+
+    // Decode based on schema (public schema)
+    const schemaEncoder = new SchemaEncoder(
+      'string username,string bio,string avatar,string scores,string connectedPlatforms,string profileTypeStreamId,string version,string extendedPublicData'
+    );
+
+    const decodedData = schemaEncoder.decodeData(attestation.data);
+
+    return { attestation, decodedData };
+  }
+
+  /**
+   * Verify on-chain attestation and reconstruct SmartProfile
+   * @param publicAttestationUID - Public attestation UID
+   * @param privateAttestationUID - Private attestation UID
+   * @param expectedRecipient - Expected PKP address
+   * @returns Verification result and reconstructed profile
+   */
+  async verifyAndReconstructProfile(
+    publicAttestationUID: string,
+    privateAttestationUID: string,
+    expectedRecipient: string
+  ): Promise<{ isValid: boolean; profile?: SmartProfile }> {
+    try {
+      const { attestation: publicAttestation, decodedData } =
+        await this.getOnChainAttestation(publicAttestationUID);
+
+      // Verify recipient
+      if (publicAttestation.recipient.toLowerCase() !== expectedRecipient.toLowerCase()) {
+        console.error('Recipient mismatch');
+        return { isValid: false };
+      }
+
+      // Verify not revoked
+      if (publicAttestation.revocationTime !== BigInt(0)) {
+        console.error('Attestation has been revoked');
+        return { isValid: false };
+      }
+
+      // Reconstruct SmartProfile from decoded data
+      const profile = new SmartProfile();
+      profile.username = decodedData.find((d: any) => d.name === 'username').value.value;
+      profile.bio = decodedData.find((d: any) => d.name === 'bio').value.value;
+      profile.avatar = decodedData.find((d: any) => d.name === 'avatar').value.value;
+      profile.scores = JSON.parse(decodedData.find((d: any) => d.name === 'scores').value.value);
+      profile.connectedPlatforms = JSON.parse(decodedData.find((d: any) => d.name === 'connectedPlatforms').value.value);
+      profile.profileTypeStreamId = decodedData.find((d: any) => d.name === 'profileTypeStreamId').value.value;
+      profile.version = decodedData.find((d: any) => d.name === 'version').value.value;
+      profile.extendedPublicData = JSON.parse(decodedData.find((d: any) => d.name === 'extendedPublicData').value.value || '{}');
+
+      // Add attestation metadata
+      profile.onchainAttestationUID = publicAttestationUID;
+      profile.privateAttestationUID = privateAttestationUID;
+
+      return { isValid: true, profile };
+    } catch (error) {
+      console.error('Attestation verification failed:', error);
+      return { isValid: false };
+    }
+  }
+
 
 
 }
