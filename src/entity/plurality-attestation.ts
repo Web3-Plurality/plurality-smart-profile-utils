@@ -397,6 +397,7 @@ export class PluralityAttestation {
     privateAttestationUID: string;
     transactionHashes: string[];
     chainId: number;
+    totalGasCost: bigint;
   }> {
     // Initialize EAS SDK for on-chain operations
     const eas = new EAS(this.config.easContractAddress);
@@ -428,6 +429,25 @@ export class PluralityAttestation {
     const publicAttestationUID: string = await publicTxResponse.wait();
     console.log(`Public attestation created: ${publicAttestationUID}`);
 
+    // Get gas usage from public attestation transaction
+    // The EAS SDK returns { data, receipt, signer, waitCallback }
+    let publicGasUsed = BigInt(0);
+    let publicGasPrice = feeData.gasPrice || BigInt(100000000000);
+    let publicTxHash = '';
+
+    // The receipt is directly on the response
+    const publicReceipt = publicTxResponse.receipt;
+    if (publicReceipt) {
+      console.log('publicReceipt.gasUsed:', publicReceipt.gasUsed);
+      if (publicReceipt.gasUsed) {
+        publicGasUsed = publicReceipt.gasUsed;
+      }
+      if (publicReceipt.gasPrice) {
+        publicGasPrice = publicReceipt.gasPrice;
+      }
+      publicTxHash = publicReceipt.hash || '';
+    }
+
     // Step 2: Attest private data Merkle root (Schema B)
     const merkleRoot = this.generateMerkleRootFromPrivateData(smartProfile.privateData);
     const privateData = this.encodePrivateProfileData(merkleRoot, '');
@@ -448,11 +468,37 @@ export class PluralityAttestation {
     const privateAttestationUID: string = await privateTxResponse.wait();
     console.log(`Private attestation created: ${privateAttestationUID}`);
 
+    // Get gas usage from private attestation transaction
+    let privateGasUsed = BigInt(0);
+    let privateGasPrice = feeData.gasPrice || BigInt(100000000000);
+    let privateTxHash = '';
+
+    const privateReceipt = privateTxResponse.receipt;
+    if (privateReceipt) {
+      console.log('privateReceipt.gasUsed:', privateReceipt.gasUsed);
+      if (privateReceipt.gasUsed) {
+        privateGasUsed = privateReceipt.gasUsed;
+      }
+      if (privateReceipt.gasPrice) {
+        privateGasPrice = privateReceipt.gasPrice;
+      }
+      privateTxHash = privateReceipt.hash || '';
+    }
+
+    // Calculate total gas usage and cost
+    const totalGasUsed = publicGasUsed + privateGasUsed;
+    const avgGasPrice = publicGasPrice > BigInt(0) ? publicGasPrice : privateGasPrice;
+    const totalGasCost = totalGasUsed * avgGasPrice;
+
+    console.log(`Gas usage - Public: ${publicGasUsed}, Private: ${privateGasUsed}, Total: ${totalGasUsed}`);
+    console.log(`Total gas cost: ${totalGasCost} wei`);
+
     return {
       publicAttestationUID: publicAttestationUID,
       privateAttestationUID: privateAttestationUID,
-      transactionHashes: [(publicTxResponse as any).tx?.hash || '', (privateTxResponse as any).tx?.hash || ''],
+      transactionHashes: [publicTxHash, privateTxHash],
       chainId: Number((await provider.getNetwork()).chainId),
+      totalGasCost,
     };
   }
 
