@@ -11,13 +11,44 @@ export class SmartProfile {
   username: string;
   avatar: string;
   bio: string;
-  scores: Score[]; 
+  scores: Score[];
   connectedPlatforms: string[];
-  profileTypeStreamId: string; 
-  version: string; 
+  profileTypeStreamId: string;
+  version: string;
   extendedPublicData: any;
   attestation: any;
   privateData: ProfilePrivateData;
+
+  // ===== ON-CHAIN ATTESTATION FIELDS (Optional - for Sapphire chain) =====
+  /**
+   * Onchain public attestation UID (Schema A)
+   * Present when profile is attested on-chain
+   */
+  onchainAttestationUID?: string;
+
+  /**
+   * Onchain private attestation UID (Schema B)
+   * Contains Merkle root commitment
+   */
+  privateAttestationUID?: string;
+
+  /**
+   * Blockchain network where attestations are stored
+   * Values: 'sepolia' | 'sapphire'
+   */
+  attestationChain?: string;
+
+  /**
+   * Transaction hash of the public attestation
+   * For verification and block explorer lookup
+   */
+  attestationTxHash?: string;
+
+  /**
+   * Block timestamp when attestation was created
+   * Useful for chronological ordering
+   */
+  attestationTimestamp?: number;
 
   constructor(data?: any) {
     this.username = data?.username || '';
@@ -25,11 +56,11 @@ export class SmartProfile {
     this.bio = data?.bio || '';
     this.scores = Object.values(ScoreTypes).map((scoreType) => ({
       scoreType: scoreType,
-      scoreValue: 0,
+      scoreValue: 500,  // Initial score is 500, each platform adds 100
     }));
     this.connectedPlatforms = data?.connected_platforms || [];
     this.profileTypeStreamId = data?.profileTypeStreamId || '';
-    this.version = '2'; 
+    this.version = '2';
     this.attestation = {};
     this.extendedPublicData = {};
     this.privateData = new ProfilePrivateData();
